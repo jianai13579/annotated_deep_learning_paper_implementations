@@ -38,7 +38,7 @@ class UNetModel(nn.Module):
             channels: int,
             n_res_blocks: int,
             attention_levels: List[int],
-            channel_multipliers: List[int],
+            channel_multipliers: List[int],  # 乘数
             n_heads: int,
             tf_layers: int = 1,
             d_cond: int = 768):
@@ -52,7 +52,15 @@ class UNetModel(nn.Module):
         :param n_heads: is the number of attention heads in the transformers
         :param tf_layers: is the number of transformer layers in the transformers
         :param d_cond: is the size of the conditional embedding in the transformers
-        """
+        in_channels是输入特征图中的通道数
+        out_channels是输出特征图中的通道数
+        channels是模型的基本通道计数
+        n_res_blocks每层残块数
+        attention_levels是应该执行注意力的层
+        channel_multipliers是每个级别的通道数的乘法因子
+        n_heads是变压器中注意力头的数量
+        tf_layers是变压器中的变压器层数
+        d_cond是变压器中条件嵌入的大小"""
         super().__init__()
         self.channels = channels
 
@@ -67,7 +75,7 @@ class UNetModel(nn.Module):
         )
 
         # Input half of the U-Net
-        self.input_blocks = nn.ModuleList()
+        self.input_blocks = nn.ModuleList()  # 初始为空
         # Initial $3 \times 3$ convolution that maps the input to `channels`.
         # The blocks are wrapped in `TimestepEmbedSequential` module because
         # different modules have different forward function signatures;
@@ -89,8 +97,8 @@ class UNetModel(nn.Module):
                 layers = [ResBlock(channels, d_time_emb, out_channels=channels_list[i])]
                 channels = channels_list[i]
                 # Add transformer
-                if i in attention_levels:
-                    layers.append(SpatialTransformer(channels, n_heads, tf_layers, d_cond))
+                if i in attention_levels:  # attention_levels是一个列表，里面有应该执行注意力的层
+                    layers.append(SpatialTransformer(channels, n_heads, tf_layers, d_cond))  # tf_layers是变压器中的变压器层数
                 # Add them to the input half of the U-Net and keep track of the number of channels of
                 # its output
                 self.input_blocks.append(TimestepEmbedSequential(*layers))
@@ -107,10 +115,10 @@ class UNetModel(nn.Module):
             ResBlock(channels, d_time_emb),
         )
 
-        # Second half of the U-Net
+        # Second half of the U-Net（U-Net的后半部分）
         self.output_blocks = nn.ModuleList([])
         # Prepare levels in reverse order
-        for i in reversed(range(levels)):
+        for i in reversed(range(levels)):  # 反过来了，i从level到0（到这！！！！！！！！！！！！）
             # Add the residual blocks and attentions
             for j in range(n_res_blocks + 1):
                 # Residual block maps from previous number of channels plus the
